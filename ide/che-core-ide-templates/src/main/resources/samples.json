@@ -1331,7 +1331,8 @@
       "location": "https://github.com/platformio/platformio-examples.git",
       "parameters": {
         "keepDir":"atmelavr-and-arduino/arduino-blink",
-        "keepVcs": "false"
+        "keepVcs": "false",
+        "convertToTopLevelProject": "true"
       }
     },
     "commands": [
@@ -1362,7 +1363,8 @@
       "location": "https://github.com/platformio/platformio-examples.git",
       "parameters": {
         "keepDir":"mbed/mbed-blink",
-        "keepVcs": "false"
+        "keepVcs": "false",
+        "convertToTopLevelProject": "true"
       }
     },
     "commands": [
