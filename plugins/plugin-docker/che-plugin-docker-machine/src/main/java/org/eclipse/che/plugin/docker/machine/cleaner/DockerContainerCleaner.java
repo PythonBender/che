@@ -23,6 +23,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -31,7 +33,7 @@ import static org.eclipse.che.plugin.docker.client.params.RemoveContainerParams.
 import static org.eclipse.che.plugin.docker.machine.DockerContainerNameGenerator.ContainerNameInfo;
 
 /**
- * Job for periodically clean up inactive docker containers
+ * Job for periodically clean up inactive docker containers.
  *
  * @author Alexander Andrienko
  */
@@ -59,19 +61,22 @@ public class DockerContainerCleaner implements Runnable {
                   unit = TimeUnit.MINUTES)
     @Override
     public void run() {
+        List<String> activeContainers = new ArrayList<>();
         try {
             for (ContainerListEntry container : dockerConnector.listContainers()) {
-                Optional<ContainerNameInfo> optional = nameGenerator.parse(container.getNames()[0]);
+                String containerName = container.getNames()[0];
+                Optional<ContainerNameInfo> optional = nameGenerator.parse(containerName);
                 if (optional.isPresent()) {
                     try {
                         // container is orphaned if not found exception is thrown
                         environmentEngine.getMachine(optional.get().getWorkspaceId(),
                                                      optional.get().getMachineId());
-
+                        activeContainers.add(containerName);
                     } catch (NotFoundException e) {
                         cleanUp(container);
                     } catch (Exception e) {
-                        LOG.error("Failed to clean up inactive container. " + e.getLocalizedMessage(), e);
+                        LOG.error(format("Failed to check activity for container with name '%s'. Cause: %s",
+                                         containerName, e.getLocalizedMessage()), e);
                     }
                 }
             }
@@ -79,6 +84,19 @@ public class DockerContainerCleaner implements Runnable {
             LOG.error("Failed to get list docker containers", e);
         } catch (Exception e) {
             LOG.error("Failed to clean up inactive containers", e);
+        }
+        logActiveContainers(activeContainers);
+    }
+
+    private void logActiveContainers(List<String> activeContainers) {
+        if (activeContainers.isEmpty()) {
+            LOG.info("No active containers were detected.");
+        } else {
+            StringBuilder activeContainersReport = new StringBuilder();
+            activeContainersReport.append(activeContainers.size() > 1 ? "Containers are registered" : "Container is registered");
+            activeContainersReport.append(" in the api:");
+            activeContainers.forEach(containerName -> activeContainersReport.append("\n\t").append(containerName));
+            LOG.info(activeContainersReport.toString());
         }
     }
 
